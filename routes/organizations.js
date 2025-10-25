@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { authenticateToken, requireOperatorOrAdmin } from '../middleware/auth.js';
 import db from '../config/database.js';
 
@@ -58,14 +59,17 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Name and country are required' });
     }
 
+    // Generate UUID for the organization
+    const orgId = crypto.randomUUID();
+
     const [result] = await db.query(
-      'INSERT INTO organizations (name, country, vat_number, eori_number, iban) VALUES (?, ?, ?, ?, ?)',
-      [name, country, vatNumber || null, eoriNumber || null, iban || null]
+      'INSERT INTO organizations (id, name, country, vat_number, eori_number, iban) VALUES (?, ?, ?, ?, ?, ?)',
+      [orgId, name, country, vatNumber || null, eoriNumber || null, iban || null]
     );
 
-    console.log('✅ Organization created with ID:', result.insertId);
+    console.log('✅ Organization created with ID:', orgId);
 
-    const [organizations] = await db.query('SELECT * FROM organizations WHERE id = ?', [result.insertId]);
+    const [organizations] = await db.query('SELECT * FROM organizations WHERE id = ?', [orgId]);
     
     console.log('📤 Sending organization data:', organizations[0]);
     res.status(201).json(organizations[0]);
