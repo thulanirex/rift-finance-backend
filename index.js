@@ -15,6 +15,8 @@ import positionRoutes from './routes/positions.js';
 import ledgerRoutes from './routes/ledger.js';
 import auditRoutes from './routes/audit.js';
 import solanaRoutes from './routes/solana.js';
+import uploadRoutes from './routes/upload.js';
+import blockchainRoutes from './routes/blockchain.js';
 
 dotenv.config();
 
@@ -30,6 +32,9 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -47,6 +52,8 @@ app.use('/api/positions', positionRoutes);
 app.use('/api/ledger', ledgerRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/solana', solanaRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/blockchain', blockchainRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
