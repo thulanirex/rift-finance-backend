@@ -7,17 +7,33 @@ const router = express.Router();
 // Get audit logs (operator/admin only)
 router.get('/', authenticateToken, requireOperatorOrAdmin, async (req, res) => {
   try {
+    // First check if audit_logs table exists
+    const [tables] = await db.query("SHOW TABLES LIKE 'audit_logs'");
+    if (tables.length === 0) {
+      console.log('⚠️ audit_logs table does not exist yet');
+      return res.json([]);
+    }
+
+    // Get logs with user email (using actual column names from your database)
     const [logs] = await db.query(`
-      SELECT a.*, u.email as actor_email
+      SELECT 
+        a.id,
+        a.user_id as actor_user_id,
+        a.action,
+        a.entity_type as entity,
+        a.entity_id,
+        a.metadata,
+        a.created_at as timestamp,
+        u.email as actor_email
       FROM audit_logs a
-      LEFT JOIN users u ON a.actor_user_id = u.id
-      ORDER BY a.timestamp DESC
+      LEFT JOIN users u ON a.user_id = u.id
+      ORDER BY a.created_at DESC
       LIMIT 1000
     `);
     res.json(logs);
   } catch (error) {
     console.error('Get audit logs error:', error);
-    res.status(500).json({ error: 'Failed to fetch audit logs' });
+    res.status(500).json({ error: 'Failed to fetch audit logs', details: error.message });
   }
 });
 
@@ -31,7 +47,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     const [result] = await db.query(
-      `INSERT INTO audit_logs (actor_user_id, action, entity, entity_id, metadata) 
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, metadata) 
        VALUES (?, ?, ?, ?, ?)`,
       [req.user.id, action, entity, entityId, metadata ? JSON.stringify(metadata) : null]
     );
